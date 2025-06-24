@@ -1,7 +1,13 @@
-import {ProseMirrorEditor} from "@/components/ProseMirrorEditor";
+import {ProseMirrorEditor} from "@/components/editor/ProseMirrorEditor";
+import {Sidebar} from "@/components/sidebar/Sidebar";
 
 export default function Home() {
   return (
-      <ProseMirrorEditor/>
+      <div className={"flex flex-row w-full"}>
+        <Sidebar/>
+        <div className={"flex-grow"}>
+          <ProseMirrorEditor/>
+        </div>
+      </div>
   );
 }
