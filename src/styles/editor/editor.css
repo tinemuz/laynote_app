@@ -1,0 +1,8 @@
+
+.ProseMirror-focused:focus-visible, input:focus-visible{
+    @apply outline-none;
+}
+
+.ProseMirror {
+    @apply break-words max-w-[740px] flex-grow;
+}
