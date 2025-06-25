@@ -4,5 +4,5 @@
 }
 
 .ProseMirror {
-    @apply break-words max-w-[600px] flex-grow;
+    @apply break-words max-w-[740px] flex-grow;
 }

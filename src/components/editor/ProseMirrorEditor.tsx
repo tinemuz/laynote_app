@@ -43,7 +43,7 @@ export const ProseMirrorEditor = () => {
             <div className={"flex flex-col h-screen"}>
                 <Toolbar/>
                 <div className={"flex flex-grow justify-center overflow-y-auto"}>
-                    <div className={"flex flex-col outline-none p-5"}>
+                    <div className={"flex flex-col w-[740px] outline-none p-5"}>
                         <div className={"flex flex-grow break-words"}>
                             <ProseMirrorDoc/>
                         </div>
