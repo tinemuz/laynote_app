@@ -10,6 +10,9 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^6.23.2",
+    "@tiptap/pm": "^2.23.0",
+    "@tiptap/react": "^2.23.0",
+    "@tiptap/starter-kit": "^2.23.0",
     "next": "15.3.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
