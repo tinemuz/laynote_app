@@ -9,15 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@handlewithcare/react-prosemirror": "^2.4.4",
+    "@clerk/nextjs": "^6.23.2",
     "next": "15.3.4",
-    "prosemirror-commands": "^1.7.1",
-    "prosemirror-history": "^1.4.1",
-    "prosemirror-keymap": "^1.2.3",
-    "prosemirror-model": "^1.25.1",
-    "prosemirror-schema-basic": "^1.2.4",
-    "prosemirror-state": "^1.4.3",
-    "prosemirror-view": "^1.39.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-reconciler": "^0.32.0"
