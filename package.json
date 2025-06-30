@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@auth0/nextjs-auth0": "^4.7.0",
     "@handlewithcare/react-prosemirror": "^2.4.4",
     "next": "15.3.4",
     "prosemirror-commands": "^1.7.1",
