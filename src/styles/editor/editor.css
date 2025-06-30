@@ -1,5 +1,5 @@
 
-.ProseMirror-focused:focus-visible, input:focus-visible{
+.ProseMirror-focused:focus-visible, input:focus-visible {
     @apply outline-none;
 }
 

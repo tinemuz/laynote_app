@@ -1,6 +1,6 @@
 "use client"
 
-import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs"
+import {SignedIn, SignedOut, SignInButton, UserButton} from "@clerk/nextjs"
 import Link from "next/link";
 
 export function UserPie() {
@@ -10,10 +10,10 @@ export function UserPie() {
             <Link href="/" className="font-bold text-lg">laynote</Link>
             <>
                 <SignedOut>
-                    <SignInButton />
+                    <SignInButton/>
                 </SignedOut>
                 <SignedIn>
-                    <UserButton />
+                    <UserButton/>
                 </SignedIn>
             </>
         </div>

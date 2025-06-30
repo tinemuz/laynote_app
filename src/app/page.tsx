@@ -1,12 +1,12 @@
 "use client"
 
-import { SignInButton, SignUpButton, useAuth } from "@clerk/nextjs"
-import { useRouter } from "next/navigation"
-import { useEffect } from "react"
-import { NavBar } from "@/components/navbar"
+import {SignUpButton, useAuth} from "@clerk/nextjs"
+import {useRouter} from "next/navigation"
+import {useEffect} from "react"
+import {NavBar} from "@/components/navbar"
 
 export default function LandingPage() {
-    const { isSignedIn, isLoaded } = useAuth()
+    const {isSignedIn, isLoaded} = useAuth()
     const router = useRouter()
 
     useEffect(() => {
@@ -17,7 +17,7 @@ export default function LandingPage() {
 
     return (
         <>
-            <NavBar />
+            <NavBar/>
             <div className="container max-w-6xl mx-auto px-8 py-16">
                 <div className="flex flex-col items-center text-center space-y-8">
                     <h1 className="text-5xl font-bold tracking-tight">
@@ -31,7 +31,8 @@ export default function LandingPage() {
                         ) : (
                             <>
                                 <SignUpButton>
-                                    <button className="bg-stone-900 text-white px-6 py-3 rounded-full font-medium hover:bg-stone-800 transition-colors">
+                                    <button
+                                        className="bg-stone-900 text-white px-6 py-3 rounded-full font-medium hover:bg-stone-800 transition-colors">
                                         Get Started
                                     </button>
                                 </SignUpButton>

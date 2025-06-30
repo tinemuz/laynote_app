@@ -1,6 +1,6 @@
 'use client'
 
-import { useEditor, EditorContent } from '@tiptap/react'
+import {EditorContent, useEditor} from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 
 const Tiptap = () => {
@@ -12,14 +12,14 @@ const Tiptap = () => {
         })],
         content: '<p>New note ...</p>',
 
-            editorProps: {
-                attributes: {
-                    class: "overflow-y-auto",
-                },
+        editorProps: {
+            attributes: {
+                class: "overflow-y-auto",
             },
+        },
     })
 
-    return <EditorContent editor={editor} />
+    return <EditorContent editor={editor}/>
 }
 
 export default Tiptap
