@@ -5,16 +5,13 @@ import { note, user } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { serializeDbObject } from "@/lib/serialization";
 
-// Helper function to get or create user
 async function getOrCreateUser(clerkId: string) {
-    // First, try to find existing user
     const userRecord = await db.select().from(user).where(eq(user.clerkId, clerkId));
 
     if (userRecord.length > 0) {
         return userRecord[0];
     }
 
-    // If user doesn't exist in our database, get their info from Clerk
     const clerkUser = await currentUser();
     if (!clerkUser) {
         throw new Error("User not found in Clerk");
@@ -27,7 +24,6 @@ async function getOrCreateUser(clerkId: string) {
         throw new Error("User email not found");
     }
 
-    // Create user in our database
     try {
         const [newUser] = await db.insert(user).values({
             clerkId: clerkId,
@@ -77,7 +73,7 @@ export async function PATCH(
             })
             .where(
                 and(
-                    eq(note.id, noteId),
+                    eq(note.id, BigInt(noteId)),
                     eq(note.userId, userRecord.id)
                 )
             )

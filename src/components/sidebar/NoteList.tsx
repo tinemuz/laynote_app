@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@clerk/nextjs';
+import { useAuth, useUser } from '@clerk/nextjs';
 
 interface Note {
   id: number;
@@ -10,19 +10,26 @@ interface Note {
   content: string;
 }
 
+// Helper function to extract preview text from note content
+const getPreviewText = (content: string): string => {
+  if (!content) return '';
+  
+  // Strip HTML tags to get plain text
+  return content.replace(/<[^>]*>/g, '');
+};
+
 export function NoteList({ 
     onSelectNote, 
-    selectedNote, 
-    onNoteUpdate 
+    selectedNote
 }: { 
     onSelectNote: (note: Note) => void;
     selectedNote: Note | null;
-    onNoteUpdate?: (updatedNote: Note) => void;
 }) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const { isSignedIn, isLoaded } = useAuth();
+  const { user } = useUser();
 
   const fetchNotes = async () => {
     try {
@@ -81,7 +88,6 @@ export function NoteList({
     }
   };
 
-  // Keyboard shortcut for creating new notes
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
@@ -94,7 +100,6 @@ export function NoteList({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [notes]);
 
-  // Update notes list when selectedNote changes
   useEffect(() => {
     if (selectedNote) {
       setNotes(prevNotes => 
@@ -159,25 +164,28 @@ export function NoteList({
           </div>
         ) : (
           <div className="px-4">
-            {notes.map((note) => (
-              <div
-                key={note.id}
-                onClick={() => onSelectNote(note)}
-                className={`p-4 cursor-pointer rounded-lg transition-colors ${
-                  selectedNote?.id === note.id 
-                    ? 'bg-blue-50 border border-blue-200' 
-                    : 'hover:bg-gray-50'
-                }`}
-              >
-                <div className="font-medium text-gray-900 truncate">{note.title}</div>
-                {note.content && (
-                  <div className="text-sm text-gray-500 truncate mt-1">
-                    {note.content.replace(/<[^>]*>/g, '').substring(0, 60)}
-                    {note.content.replace(/<[^>]*>/g, '').length > 60 && '...'}
-                  </div>
-                )}
-              </div>
-            ))}
+            {notes.map((note) => {
+              const previewText = getPreviewText(note.content);
+              return (
+                <div
+                  key={note.id}
+                  onClick={() => onSelectNote(note)}
+                  className={`p-4 cursor-pointer rounded-lg transition-colors ${
+                    selectedNote?.id === note.id 
+                      ? 'bg-blue-50 border border-blue-200' 
+                      : 'hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="font-medium text-gray-900 truncate">{note.title}</div>
+                  {previewText && (
+                    <div className="text-sm text-gray-500 truncate mt-1">
+                      {previewText.substring(0, 60)}
+                      {previewText.length > 60 && '...'}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

@@ -1,4 +1,3 @@
-// Helper function to serialize database objects (convert BigInt to string)
 export function serializeDbObject(obj: any): any {
     if (obj === null || obj === undefined) {
         return obj;

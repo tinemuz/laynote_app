@@ -1,4 +1,5 @@
 import { NoteList } from "@/components/sidebar/NoteList";
+import {SignedIn, SignedOut, SignInButton, UserButton} from "@clerk/nextjs";
 
 interface Note {
   id: number;
@@ -8,12 +9,10 @@ interface Note {
 
 export function Sidebar({ 
     onSelectNote, 
-    selectedNote, 
-    onNoteUpdate 
+    selectedNote
 }: { 
     onSelectNote: (note: Note) => void;
     selectedNote: Note | null;
-    onNoteUpdate?: (updatedNote: Note) => void;
 }) {
     return (
         <div className="w-80 h-full bg-white border-r border-gray-200 flex flex-col">
@@ -24,9 +23,12 @@ export function Sidebar({
                 <NoteList 
                     onSelectNote={onSelectNote} 
                     selectedNote={selectedNote} 
-                    onNoteUpdate={onNoteUpdate}
                 />
             </div>
+
+            <SignedIn>
+                <UserButton/>
+            </SignedIn>
         </div>
     );
 }

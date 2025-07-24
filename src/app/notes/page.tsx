@@ -2,8 +2,10 @@
 
 import { Sidebar } from "@/components/sidebar/Sidebar";
 import Tiptap from "@/components/Tiptap/Tiptap";
+import { WebSocketStatus } from "@/components/WebSocketStatus";
 import { useState, useEffect } from "react";
-import { useAuth } from '@clerk/nextjs';
+import { useAuth, useUser } from '@clerk/nextjs';
+import { config } from '@/lib/config';
 
 interface Note {
   id: number;
@@ -14,16 +16,23 @@ interface Note {
 export default function NotesDashboard() {
     const [selectedNote, setSelectedNote] = useState<Note | null>(null);
     const { isSignedIn, isLoaded } = useAuth();
-
-    useEffect(() => {
-        if (isLoaded && !isSignedIn) {
-            window.location.href = '/';
+    const { user } = useUser();
+    
+    const websocketUrl = config.websocket.url;
+    
+    const getUserId = () => {
+        if (!user?.id) return 1;
+        
+        let hash = 0;
+        for (let i = 0; i < user.id.length; i++) {
+            const char = user.id.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
         }
-    }, [isLoaded, isSignedIn]);
-
-    const handleNoteUpdate = (updatedNote: Note) => {
-        setSelectedNote(updatedNote);
+        return Math.abs(hash);
     };
+    
+    const userId = getUserId();
 
     if (!isLoaded) {
         return (
@@ -41,18 +50,33 @@ export default function NotesDashboard() {
         );
     }
 
+    const handleSelectNote = (note: Note) => {
+        setSelectedNote(note);
+    };
+
+    const handleNoteUpdate = (updatedNote: Note) => {
+        setSelectedNote(updatedNote);
+    };
+
     return (
         <div className="flex w-full h-screen bg-gray-50">
             <Sidebar 
-                onSelectNote={setSelectedNote} 
+                onSelectNote={handleSelectNote} 
                 selectedNote={selectedNote} 
-                onNoteUpdate={handleNoteUpdate} 
             />
             <div className="flex-1 flex flex-col">
                 <div className="flex-1 p-6">
+                    <div className="mb-4">
+                        <WebSocketStatus 
+                            userId={userId}
+                            websocketUrl={websocketUrl}
+                        />
+                    </div>
                     <Tiptap 
                         note={selectedNote} 
-                        onNoteUpdate={handleNoteUpdate} 
+                        onNoteUpdate={handleNoteUpdate}
+                        userId={userId}
+                        websocketUrl={websocketUrl}
                     />
                 </div>
             </div>

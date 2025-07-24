@@ -1,80 +1,111 @@
 # Laynote - Simple Note Taking App
 
-A clean, fast note-taking application built with Next.js, Tiptap editor, and Clerk authentication.
+A simplified note-taking application with real-time collaboration using WebSockets.
 
 ## Features
 
-- **Simple Note Creation**: Create new notes with a single click or Ctrl+N shortcut
-- **Rich Text Editing**: Powered by Tiptap with formatting options (bold, italic, headings, lists)
+- **Simple WebSocket Implementation**: Clean and straightforward WebSocket client
+- **Real-time Collaboration**: Multiple users can edit notes simultaneously
 - **Auto-save**: Notes are automatically saved as you type
-- **Clean Interface**: Minimal, distraction-free design
-- **User Authentication**: Secure login with Clerk
+- **Rich Text Editor**: Powered by Tiptap with basic formatting
+- **Authentication**: Built with Clerk for user management
 
-## Tech Stack
+## WebSocket Architecture
 
-- **Frontend**: Next.js 15, React 19, TypeScript
-- **Editor**: Tiptap with Starter Kit
-- **Authentication**: Clerk
-- **Database**: Neon PostgreSQL with Drizzle ORM
-- **Styling**: Tailwind CSS
+The WebSocket implementation has been simplified to focus on core functionality:
+
+### Key Components
+
+1. **SimpleWebSocketClient** (`src/lib/websocket.ts`)
+   - Basic WebSocket connection management
+   - Simple event system for real-time updates
+   - No complex reconnection logic or request/response handling
+
+2. **useWebSocket Hook** (`src/hooks/useWebSocket.ts`)
+   - Simple connection status management
+   - Basic error handling
+   - Automatic connection on mount
+
+3. **Real-time Features**
+   - Auto-save content changes (debounced)
+   - Real-time title updates
+   - Live collaboration between users
+
+### WebSocket Messages
+
+The app uses a simple message format:
+
+```typescript
+interface WebSocketMessage {
+    action: string;
+    noteId?: string;
+    content?: string;
+    title?: string;
+    userId?: number;
+}
+```
+
+### Supported Actions
+
+- `UPDATE_CONTENT`: Save note content changes
+- `UPDATE_TITLE`: Save note title changes
+- `NOTE_CREATED`: New note created
+- `ERROR`: Error messages
 
 ## Getting Started
 
-1. Clone the repository
-2. Install dependencies:
+1. Install dependencies:
    ```bash
    npm install
    ```
 
-3. Set up environment variables:
-   ```bash
-   # Clerk authentication
-   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
-   CLERK_SECRET_KEY=your_clerk_secret_key
-   
-   # Database
-   DATABASE_URL=your_neon_database_url
+2. Set up environment variables:
+   ```env
+   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_key
+   CLERK_SECRET_KEY=your_clerk_secret
+   NEXT_PUBLIC_WEBSOCKET_URL=wss://laynote-websocket.fly.dev/notes
    ```
 
-4. Run the development server:
+3. Run the development server:
    ```bash
    npm run dev
    ```
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser
-
 ## Usage
 
-- **Create a note**: Click "New Note" button or press Ctrl+N
-- **Edit title**: Click on the title field and type
-- **Edit content**: Use the rich text editor with formatting toolbar
-- **Auto-save**: Changes are automatically saved after 1 second of inactivity
+- Create new notes with the "New Note" button or Ctrl+N
+- Edit notes in real-time with automatic saving
+- Multiple users can collaborate on the same note
+- WebSocket status is shown in the top-right corner
 
-## Project Structure
+## Troubleshooting
 
-```
-src/
-├── app/
-│   ├── api/notes/          # Note API endpoints
-│   ├── notes/              # Notes page
-│   └── page.tsx            # Landing page
-├── components/
-│   ├── Tiptap/             # Rich text editor
-│   ├── navbar.tsx          # Navigation bar
-│   └── sidebar/            # Note list sidebar
-└── db/
-    ├── index.ts            # Database connection
-    └── schema.ts           # Database schema
-```
+### WebSocket Connection Issues
 
-## Database Schema
+If you see "Connecting to real-time server..." indefinitely:
 
-- **users**: User accounts linked to Clerk authentication
-- **notes**: User notes with title, content, and timestamps
+1. **Check if the Java WebSocket server is running** at `wss://laynote-websocket.fly.dev`
 
-## Development
+2. **Verify the WebSocket URL** in your environment variables:
+   ```env
+   NEXT_PUBLIC_WEBSOCKET_URL=wss://laynote-websocket.fly.dev/notes
+   ```
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run start` - Start production server
-- `npm run lint` - Run ESLint
+3. **Check browser console** for WebSocket connection errors
+
+4. **Alternative**: If you don't need real-time features, the app will still work for basic note-taking without WebSocket connection
+
+### Title Updates Not Working
+
+- Make sure the Java WebSocket server is running and accessible
+- Check that the `onNoteUpdate` callback is properly passed to the Tiptap component
+- Verify that the note ID is being sent correctly in WebSocket messages
+- Ensure your Java server handles the `UPDATE_TITLE` action properly
+
+## Architecture Benefits
+
+- **Simplified Codebase**: Removed complex reconnection logic and request/response handling
+- **Easier Debugging**: Clear separation of concerns and simple event flow
+- **Better Performance**: Reduced overhead from complex WebSocket management
+- **Maintainable**: Straightforward code that's easy to understand and modify
+- **Graceful Degradation**: App works even without WebSocket connection

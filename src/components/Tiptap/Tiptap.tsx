@@ -2,7 +2,8 @@
 
 import {EditorContent, useEditor} from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
-import {useEffect, useCallback} from "react";
+import {useEffect, useCallback, useRef} from "react";
+import { useWebSocket } from '@/hooks/useWebSocket';
 
 interface Note {
     id: number;
@@ -10,10 +11,17 @@ interface Note {
     content: string;
 }
 
-const Tiptap = ({note, onNoteUpdate}: { 
+const Tiptap = ({note, onNoteUpdate, userId, websocketUrl}: { 
     note: Note | null;
     onNoteUpdate?: (updatedNote: Note) => void;
+    userId: number;
+    websocketUrl: string;
 }) => {
+    const lastSavedContent = useRef<string>('');
+    const lastSavedTitle = useRef<string>('');
+    
+    const { wsClient, isConnected } = useWebSocket({ userId, websocketUrl });
+
     const editor = useEditor({
         extensions: [StarterKit.configure({
             heading: {
@@ -28,48 +36,122 @@ const Tiptap = ({note, onNoteUpdate}: {
         },
     })
 
-    // Save content changes
     const saveContent = useCallback(async () => {
-        if (!note || !editor) return;
+        if (!note || !editor || !isConnected) return;
         
-        const content = editor.getHTML();
-        if (content === note.content) return; // No changes
+        // Get the HTML content directly
+        const htmlContent = editor.getHTML();
+        
+        if (htmlContent === lastSavedContent.current) return;
 
         try {
-            const response = await fetch(`/api/notes/${note.id}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ content }),
-            });
-
-            if (response.ok) {
-                const updatedNote = await response.json();
-                onNoteUpdate?.(updatedNote);
-            } else if (response.status === 401) {
-                window.location.href = '/';
-            } else {
-                console.error('Failed to save note');
+            wsClient?.updateContent(note.id.toString(), htmlContent);
+            lastSavedContent.current = htmlContent;
+            
+            if (onNoteUpdate) {
+                onNoteUpdate({ ...note, content: htmlContent });
             }
         } catch (error) {
             console.error('Failed to save note:', error);
+        } finally {
+            // Clear the timeout reference
+            saveTimeoutRef.current = null;
         }
-    }, [note, editor, onNoteUpdate]);
+    }, [note, editor, wsClient, isConnected, onNoteUpdate]);
 
-    // Auto-save on content change (debounced)
+    // Use a ref to track the last content for comparison
+    const contentRef = useRef<string>('');
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const isInitializingRef = useRef<boolean>(false);
+    
+    const handleUpdate = useCallback(() => {
+        // Skip updates during initialization
+        if (isInitializingRef.current) return;
+        
+        // Get the HTML content directly
+        const htmlContent = editor?.getHTML();
+        
+        if (htmlContent) {
+            if (htmlContent !== contentRef.current) {
+                contentRef.current = htmlContent;
+                
+                // Clear any existing timeout
+                if (saveTimeoutRef.current) {
+                    clearTimeout(saveTimeoutRef.current);
+                }
+                
+                // Set new timeout
+                saveTimeoutRef.current = setTimeout(saveContent, 1000);
+            }
+        }
+    }, [editor, saveContent]);
+    
     useEffect(() => {
         if (!editor) return;
 
-        const timeoutId = setTimeout(saveContent, 1000);
-        return () => clearTimeout(timeoutId);
-    }, [editor?.getHTML(), saveContent]);
+        // Listen to editor changes
+        editor.on('update', handleUpdate);
+        
+        return () => {
+            editor.off('update', handleUpdate);
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+            }
+        };
+    }, [editor, handleUpdate]);
+
+    useEffect(() => {
+        if (!wsClient || !note) return;
+
+        const handleNoteUpdate = (data: any) => {
+            if (data.noteId === note.id.toString()) {
+                if (data.action === 'UPDATE_CONTENT' && data.content) {
+                    // Only update if the content is different from what we last saved
+                    // This prevents cursor position resets when we receive our own updates
+                    if (data.content !== lastSavedContent.current) {
+                        // Use the content directly as HTML
+                        editor?.commands.setContent(data.content, false);
+                        lastSavedContent.current = data.content;
+                        
+                        if (onNoteUpdate) {
+                            onNoteUpdate({ ...note, content: data.content });
+                        }
+                    }
+                } else if (data.action === 'UPDATE_TITLE' && data.title) {
+                    lastSavedTitle.current = data.title;
+                    
+                    if (onNoteUpdate) {
+                        onNoteUpdate({ ...note, title: data.title });
+                    }
+                }
+            }
+        };
+
+        wsClient.on('noteUpdated', handleNoteUpdate);
+
+        return () => {
+            wsClient.off('noteUpdated', handleNoteUpdate);
+        };
+    }, [wsClient, note, editor, onNoteUpdate]);
 
     useEffect(() => {
         if (note) {
-            editor?.commands.setContent(note.content || '<p>Start writing...</p>');
+            isInitializingRef.current = true;
+            
+            let contentToLoad = '<p>Start writing...</p>';
+            
+            if (note.content) {
+                contentToLoad = note.content;
+            }
+            
+            editor?.commands.setContent(contentToLoad);
+            lastSavedContent.current = note.content || '';
+            lastSavedTitle.current = note.title;
+            isInitializingRef.current = false;
         } else {
+            isInitializingRef.current = true;
             editor?.commands.setContent('<p>Select a note to view its content or create a new one</p>');
+            isInitializingRef.current = false;
         }
     }, [note, editor]);
 
@@ -86,21 +168,14 @@ const Tiptap = ({note, onNoteUpdate}: {
                         value={note.title}
                         onChange={async (e) => {
                             const newTitle = e.target.value;
+                            if (newTitle === lastSavedTitle.current) return;
+                            
                             try {
-                                const response = await fetch(`/api/notes/${note.id}`, {
-                                    method: 'PATCH',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                    },
-                                    body: JSON.stringify({ title: newTitle }),
-                                });
-                                if (response.ok) {
-                                    const updatedNote = await response.json();
-                                    onNoteUpdate?.(updatedNote);
-                                } else if (response.status === 401) {
-                                    window.location.href = '/';
-                                } else {
-                                    console.error('Failed to update title');
+                                wsClient?.updateTitle(note.id.toString(), newTitle);
+                                lastSavedTitle.current = newTitle;
+                                
+                                if (onNoteUpdate) {
+                                    onNoteUpdate({ ...note, title: newTitle });
                                 }
                             } catch (error) {
                                 console.error('Failed to update title:', error);
@@ -112,7 +187,6 @@ const Tiptap = ({note, onNoteUpdate}: {
                 </div>
             )}
             
-            {/* Toolbar */}
             {note && (
                 <div className="border-b border-gray-200 p-3 flex gap-1 flex-wrap">
                     <button

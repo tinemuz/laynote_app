@@ -5,4 +5,16 @@
 
 .ProseMirror {
     @apply break-words max-w-[740px] flex-grow;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* Preserve multiple spaces in text nodes */
+.ProseMirror p {
+    white-space: pre-wrap;
+}
+
+/* Ensure spaces are preserved in all text content */
+.ProseMirror * {
+    white-space: inherit;
 }
