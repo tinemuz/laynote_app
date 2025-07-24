@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@clerk/nextjs';
 
 interface Note {
   id: number;
@@ -9,30 +10,50 @@ interface Note {
   content: string;
 }
 
-export function NoteList({ onSelectNote, selectedNote }: { onSelectNote: (note: Note) => void, selectedNote: Note | null }) {
+export function NoteList({ 
+    onSelectNote, 
+    selectedNote, 
+    onNoteUpdate 
+}: { 
+    onSelectNote: (note: Note) => void;
+    selectedNote: Note | null;
+    onNoteUpdate?: (updatedNote: Note) => void;
+}) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const { isSignedIn, isLoaded } = useAuth();
+
+  const fetchNotes = async () => {
+    try {
+      const res = await fetch('/api/notes');
+      
+      if (!res.ok) {
+        if (res.status === 401) {
+          window.location.href = '/';
+          return;
+        }
+        throw new Error('Failed to fetch notes');
+      }
+      const data = await res.json();
+      setNotes(data);
+    } catch (err) {
+      console.error("Error fetching notes:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchNotes = async () => {
-      try {
-        const res = await fetch('/api/notes');
-        if (!res.ok) {
-          throw new Error('Failed to fetch notes');
-        }
-        const data = await res.json();
-        setNotes(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An unknown error occurred');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchNotes();
-  }, []);
+    if (isLoaded && isSignedIn) {
+      fetchNotes();
+    } else if (isLoaded && !isSignedIn) {
+      window.location.href = '/';
+    }
+  }, [isLoaded, isSignedIn]);
 
   const createNote = async () => {
+    setIsCreating(true);
     try {
       const res = await fetch('/api/notes', {
         method: 'POST',
@@ -41,23 +62,63 @@ export function NoteList({ onSelectNote, selectedNote }: { onSelectNote: (note: 
         },
         body: JSON.stringify({ title: 'New Note' }),
       });
+      
       if (!res.ok) {
+        if (res.status === 401) {
+          window.location.href = '/';
+          return;
+        }
         throw new Error('Failed to create note');
       }
+      
       const newNote = await res.json();
       setNotes([...notes, newNote]);
       onSelectNote(newNote);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      console.error("Error creating note:", err);
+    } finally {
+      setIsCreating(false);
     }
   };
 
-  if (isLoading) {
-    return <div>Loading...</div>;
+  // Keyboard shortcut for creating new notes
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        createNote();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [notes]);
+
+  // Update notes list when selectedNote changes
+  useEffect(() => {
+    if (selectedNote) {
+      setNotes(prevNotes => 
+        prevNotes.map(note => 
+          note.id === selectedNote.id ? selectedNote : note
+        )
+      );
+    }
+  }, [selectedNote]);
+
+  if (!isLoaded || isLoading) {
+    return (
+      <div className="flex items-center justify-center h-32">
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    );
   }
 
-  if (error) {
-    return <div>Error: {error}</div>;
+  if (!isSignedIn) {
+    return (
+      <div className="flex items-center justify-center h-32">
+        <div className="text-gray-500">Please sign in to view notes</div>
+      </div>
+    );
   }
 
   return (
@@ -65,24 +126,61 @@ export function NoteList({ onSelectNote, selectedNote }: { onSelectNote: (note: 
       <div className="p-4">
         <button
           onClick={createNote}
-          className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors"
+          disabled={isCreating}
+          className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center font-medium"
         >
-          New Note
+          {isCreating ? (
+            <>
+              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Creating...
+            </>
+          ) : (
+            <>
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              New Note
+            </>
+          )}
         </button>
+        <div className="text-xs text-gray-500 mt-2 text-center">
+          Press Ctrl+N to create a new note
+        </div>
       </div>
-      <ul className="flex-grow overflow-y-auto">
-        {notes.map((note) => (
-          <li
-            key={note.id}
-            onClick={() => onSelectNote(note)}
-            className={`p-2 cursor-pointer hover:bg-gray-200 ${
-              selectedNote?.id === note.id ? 'bg-gray-300' : ''
-            }`}
-          >
-            {note.title}
-          </li>
-        ))}
-      </ul>
+      
+      <div className="flex-1 overflow-y-auto">
+        {notes.length === 0 ? (
+          <div className="p-6 text-center text-gray-500">
+            <p className="font-medium">No notes yet</p>
+            <p className="text-sm mt-1">Create your first note to get started</p>
+          </div>
+        ) : (
+          <div className="px-4">
+            {notes.map((note) => (
+              <div
+                key={note.id}
+                onClick={() => onSelectNote(note)}
+                className={`p-4 cursor-pointer rounded-lg transition-colors ${
+                  selectedNote?.id === note.id 
+                    ? 'bg-blue-50 border border-blue-200' 
+                    : 'hover:bg-gray-50'
+                }`}
+              >
+                <div className="font-medium text-gray-900 truncate">{note.title}</div>
+                {note.content && (
+                  <div className="text-sm text-gray-500 truncate mt-1">
+                    {note.content.replace(/<[^>]*>/g, '').substring(0, 60)}
+                    {note.content.replace(/<[^>]*>/g, '').length > 60 && '...'}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

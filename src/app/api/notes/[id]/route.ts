@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { note, user } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { serializeDbObject } from "@/lib/serialization";
 
 // Helper function to get or create user
@@ -42,48 +42,10 @@ async function getOrCreateUser(clerkId: string) {
     }
 }
 
-export async function GET() {
-    try {
-        const authResult = await auth();
-        const clerkId = authResult?.userId;
-
-        if (!clerkId) {
-            return NextResponse.json(
-                { error: "Unauthorized" },
-                { status: 401 }
-            );
-        }
-
-        const userRecord = await getOrCreateUser(clerkId);
-        const notes = await db.select().from(note).where(eq(note.userId, userRecord.id));
-
-        return NextResponse.json(serializeDbObject(notes));
-    } catch (error) {
-        console.error("Error in GET /api/notes:", error);
-
-        if (error instanceof Error) {
-            if (error.message.includes("Unauthorized")) {
-                return NextResponse.json(
-                    { error: "Unauthorized" },
-                    { status: 401 }
-                );
-            }
-            if (error.message.includes("not found")) {
-                return NextResponse.json(
-                    { error: "User not found" },
-                    { status: 404 }
-                );
-            }
-        }
-
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
-    }
-}
-
-export async function POST(req: Request) {
+export async function PATCH(
+    req: Request,
+    { params }: { params: { id: string } }
+) {
     try {
         const authResult = await auth();
         const clerkId = authResult?.userId;
@@ -97,16 +59,40 @@ export async function POST(req: Request) {
 
         const userRecord = await getOrCreateUser(clerkId);
         const { title, content } = await req.json();
+        const noteId = parseInt(params.id);
 
-        const [newNote] = await db.insert(note).values({
-            title: title || "New Note",
-            content: content || "",
-            userId: userRecord.id,
-        }).returning();
+        if (isNaN(noteId)) {
+            return NextResponse.json(
+                { error: "Invalid note ID" },
+                { status: 400 }
+            );
+        }
 
-        return NextResponse.json(serializeDbObject(newNote));
+        const [updatedNote] = await db
+            .update(note)
+            .set({
+                ...(title !== undefined && { title }),
+                ...(content !== undefined && { content }),
+                updatedAt: new Date(),
+            })
+            .where(
+                and(
+                    eq(note.id, noteId),
+                    eq(note.userId, userRecord.id)
+                )
+            )
+            .returning();
+
+        if (!updatedNote) {
+            return NextResponse.json(
+                { error: "Note not found or access denied" },
+                { status: 404 }
+            );
+        }
+
+        return NextResponse.json(serializeDbObject(updatedNote));
     } catch (error) {
-        console.error("Error in POST /api/notes:", error);
+        console.error("Error in PATCH /api/notes/[id]:", error);
 
         if (error instanceof Error) {
             if (error.message.includes("Unauthorized")) {
@@ -128,4 +114,4 @@ export async function POST(req: Request) {
             { status: 500 }
         );
     }
-}
+} 
