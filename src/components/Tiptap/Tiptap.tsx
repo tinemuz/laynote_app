@@ -2,8 +2,15 @@
 
 import {EditorContent, useEditor} from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
+import {useEffect} from "react";
 
-const Tiptap = () => {
+interface Note {
+    id: number;
+    title: string;
+    content: string;
+}
+
+const Tiptap = ({note}: { note: Note | null }) => {
     const editor = useEditor({
         extensions: [StarterKit.configure({
             heading: {
@@ -18,6 +25,14 @@ const Tiptap = () => {
             },
         },
     })
+
+    useEffect(() => {
+        if (note) {
+            editor?.commands.setContent(note.content);
+        } else {
+            editor?.commands.setContent('<p>Select a note to view its content</p>');
+        }
+    }, [note, editor]);
 
     return <EditorContent editor={editor}/>
 }

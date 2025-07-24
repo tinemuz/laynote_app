@@ -6,8 +6,8 @@ import Link from "next/link";
 export function UserPie() {
 
     return (
-        <div className="container px-2 flex h-14 w-full items-center justify-between">
-            <Link href="/" className="font-bold text-lg">laynote</Link>
+        <div className="container bg-gray-200 rounded-full p-2 flex w-full items-center justify-between">
+            <Link href="/" className="pl-1">laynote</Link>
             <>
                 <SignedOut>
                     <SignInButton/>
